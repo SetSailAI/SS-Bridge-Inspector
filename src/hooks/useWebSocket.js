@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { io } from 'socket.io-client';
 
 function generateUserId() {
@@ -11,10 +11,10 @@ function isEmptyObject(obj) {
   return obj && typeof obj === 'object' && Object.keys(obj).length === 0;
 }
 
-function getParameters(isKiosk) {
+function getParameters(isKiosk, customParams = {}) {
   const params = {};
   if (isKiosk) params.platform = 'kiosk';
-  return params;
+  return { ...params, ...customParams };
 }
 
 function stripEmptyParameters(payload) {
@@ -25,13 +25,17 @@ function stripEmptyParameters(payload) {
   return result;
 }
 
-export function useWebSocket() {
+export function useWebSocket(config) {
   const [connectionState, setConnectionState] = useState('disconnected');
   const [socket, setSocket] = useState(null);
   const [messageInput, setMessageInput] = useState('');
   const [logs, setLogs] = useState([]);
   const nextLogIdRef = useRef(0);
   const configRef = useRef(null);
+
+  useEffect(() => {
+    configRef.current = config;
+  }, [config]);
 
   const addLog = useCallback((direction, payload) => {
     const id = nextLogIdRef.current++;
@@ -44,7 +48,7 @@ export function useWebSocket() {
   const addReceivedLog = useCallback((payload) => addLog('received', payload), [addLog]);
 
   const connect = useCallback((config) => {
-    const { serverUrl, apiKey, path, chatbotId, pageId, isKiosk } = config;
+    const { serverUrl, apiKey, path, chatbotId, pageId, isKiosk, customParams = {} } = config;
     configRef.current = config;
 
     const protocol = serverUrl.startsWith('wss://') || serverUrl.startsWith('https://') ? 'wss://' : 'ws://';
@@ -69,7 +73,7 @@ export function useWebSocket() {
       setConnectionState('connected');
       addReceivedLog({ event: 'connect', userId });
 
-      const params = getParameters(isKiosk);
+      const params = getParameters(isKiosk, customParams);
       const messagePayload = {
         sender: { id: userId },
         recipient: { id: 'BOT' },
@@ -120,7 +124,7 @@ export function useWebSocket() {
     if (!text || !socket) return;
 
     const config = configRef.current;
-    const params = config ? getParameters(config.isKiosk) : {};
+    const params = config ? getParameters(config.isKiosk, config.customParams) : {};
     const payload = stripEmptyParameters({
       message: text,
       parameters: params,

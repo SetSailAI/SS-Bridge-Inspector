@@ -15,6 +15,44 @@ function App() {
   const [chatbotId, setChatbotId] = useState(DEFAULT_CHATBOT_ID);
   const [pageId, setPageId] = useState(DEFAULT_PAGE_ID);
   const [isKiosk, setIsKiosk] = useState(false);
+  const [customParams, setCustomParams] = useState({});
+  const [customParamInput, setCustomParamInput] = useState('');
+  const [paramInputError, setParamInputError] = useState('');
+
+  const parseParamInput = (input) => {
+    const colonIndex = input.indexOf(':');
+    if (colonIndex === -1) return null;
+    const key = input.slice(0, colonIndex).trim();
+    const valueStr = input.slice(colonIndex + 1).trim();
+    if (!key) return null;
+    try {
+      const value = JSON.parse(valueStr);
+      return { key, value };
+    } catch {
+      return null;
+    }
+  };
+
+  const handleAddParam = () => {
+    setParamInputError('');
+    const parsed = parseParamInput(customParamInput);
+    if (!parsed) {
+      setParamInputError('Invalid format. Use key:value (value must be valid JSON)');
+      return;
+    }
+    setCustomParams((prev) => ({ ...prev, [parsed.key]: parsed.value }));
+    setCustomParamInput('');
+  };
+
+  const handleRemoveParam = (key) => {
+    setCustomParams((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
+  const mergedParams = { ...(isKiosk ? { platform: 'kiosk' } : {}), ...customParams };
 
   const {
     connectionState,
@@ -28,7 +66,7 @@ function App() {
     disconnect,
     send,
     clearAndReconnect,
-  } = useWebSocket();
+  } = useWebSocket({ serverUrl, apiKey, path, chatbotId, pageId, isKiosk, customParams });
 
   const handleConnect = () => connect({
     serverUrl,
@@ -37,6 +75,7 @@ function App() {
     chatbotId,
     pageId,
     isKiosk,
+    customParams,
   });
 
   useEffect(() => {
@@ -129,6 +168,39 @@ function App() {
                 isKiosk
               </label>
             </div>
+            <div className="connection-row connection-row-param">
+              <label>
+                Custom param (key:value)
+                <div className="param-row">
+                  <input
+                    type="text"
+                    value={customParamInput}
+                    onChange={(e) => {
+                      setCustomParamInput(e.target.value);
+                      setParamInputError('');
+                    }}
+                    placeholder='e.g. foo:123 or bar:"hello"'
+                    disabled={configDisabled}
+                  />
+                  <button type="button" onClick={handleAddParam} disabled={configDisabled}>
+                    Add
+                  </button>
+                </div>
+                {paramInputError && <span className="param-error">{paramInputError}</span>}
+                {Object.keys(customParams).length > 0 && (
+                  <div className="param-list">
+                    {Object.entries(customParams).map(([key, value]) => (
+                      <div key={key} className="param-item">
+                        <span className="param-item-text">{key}: {JSON.stringify(value)}</span>
+                        <button type="button" onClick={() => handleRemoveParam(key)} className="param-remove">
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </label>
+            </div>
             <div className="connection-row">
               <span className={`status status-${connectionState}`}>{connectionState}</span>
               {!isConnected ? (
@@ -159,7 +231,7 @@ function App() {
             <div className="send-params">
               <span className="send-params-label">Parameters:</span>
               <pre className="send-params-value">
-                {JSON.stringify(isKiosk ? { platform: 'kiosk' } : {}, null, 2)}
+                {JSON.stringify(mergedParams, null, 2)}
               </pre>
             </div>
           </section>

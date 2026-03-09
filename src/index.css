@@ -101,6 +101,52 @@ section h2 {
   cursor: pointer;
 }
 
+.connection-row-param .param-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.connection-row-param .param-row input {
+  flex: 1;
+}
+
+.param-error {
+  display: block;
+  font-size: 12px;
+  color: #e88;
+  margin-top: 4px;
+}
+
+.param-list {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.param-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  background: #252525;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: monospace;
+}
+
+.param-item-text {
+  color: #aaa;
+}
+
+.param-remove {
+  padding: 2px 8px;
+  font-size: 14px;
+  line-height: 1;
+  min-width: auto;
+}
+
 input[type="text"] {
   width: 100%;
   padding: 8px 12px;
