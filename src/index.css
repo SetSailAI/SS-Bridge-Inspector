@@ -111,6 +111,12 @@ section h2 {
   flex: 1;
 }
 
+.required {
+  font-size: 12px;
+  color: #888;
+  font-weight: normal;
+}
+
 .param-error {
   display: block;
   font-size: 12px;

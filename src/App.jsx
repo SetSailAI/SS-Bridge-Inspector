@@ -14,7 +14,8 @@ function App() {
   const [path, setPath] = useState(DEFAULT_PATH);
   const [chatbotId, setChatbotId] = useState(DEFAULT_CHATBOT_ID);
   const [pageId, setPageId] = useState(DEFAULT_PAGE_ID);
-  const [isKiosk, setIsKiosk] = useState(false);
+  const [channel, setChannel] = useState('app');
+  const [sessionPrefix, setSessionPrefix] = useState('');
   const [customParams, setCustomParams] = useState({});
   const [customParamInput, setCustomParamInput] = useState('');
   const [paramInputError, setParamInputError] = useState('');
@@ -52,7 +53,7 @@ function App() {
     });
   };
 
-  const mergedParams = { ...(isKiosk ? { platform: 'kiosk' } : {}), ...customParams };
+  const mergedParams = { ...(channel === 'kiosk' ? { platform: 'kiosk' } : {}), ...customParams };
 
   const {
     connectionState,
@@ -66,7 +67,7 @@ function App() {
     disconnect,
     send,
     clearAndReconnect,
-  } = useWebSocket({ serverUrl, apiKey, path, chatbotId, pageId, isKiosk, customParams });
+  } = useWebSocket({ serverUrl, apiKey, path, chatbotId, pageId, channel, sessionPrefix, customParams });
 
   const handleConnect = () => connect({
     serverUrl,
@@ -74,9 +75,12 @@ function App() {
     path,
     chatbotId,
     pageId,
-    isKiosk,
+    channel,
+    sessionPrefix,
     customParams,
   });
+
+  const canConnect = sessionPrefix.trim() !== '';
 
   useEffect(() => {
     const el = logsContainerRef.current;
@@ -157,15 +161,30 @@ function App() {
                 />
               </label>
             </div>
-            <div className="connection-row connection-row-checkbox">
-              <label className="checkbox-label">
+            <div className="connection-row">
+              <label>
+                Channel
+                <select
+                  value={channel}
+                  onChange={(e) => setChannel(e.target.value)}
+                  disabled={configDisabled}
+                >
+                  <option value="app">app</option>
+                  <option value="kiosk">kiosk</option>
+                  <option value="widget">widget</option>
+                </select>
+              </label>
+            </div>
+            <div className="connection-row">
+              <label>
+                Session prefix <span className="required">(required)</span>
                 <input
-                  type="checkbox"
-                  checked={isKiosk}
-                  onChange={(e) => setIsKiosk(e.target.checked)}
+                  type="text"
+                  value={sessionPrefix}
+                  onChange={(e) => setSessionPrefix(e.target.value)}
+                  placeholder="Enter session prefix"
                   disabled={configDisabled}
                 />
-                isKiosk
               </label>
             </div>
             <div className="connection-row connection-row-param">
@@ -204,7 +223,7 @@ function App() {
             <div className="connection-row">
               <span className={`status status-${connectionState}`}>{connectionState}</span>
               {!isConnected ? (
-                <button onClick={handleConnect} disabled={connectionState === 'connecting'}>
+                <button onClick={handleConnect} disabled={connectionState === 'connecting' || !canConnect}>
                   Connect
                 </button>
               ) : (
