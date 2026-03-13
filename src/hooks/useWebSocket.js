@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { io } from 'socket.io-client';
+import { STORAGE_KEY } from '../constants';
 
 function generateUserId(channel, sessionPrefix) {
   const timestamp = new Date().toISOString().replace(/[-:.TZ]/g, "");
@@ -75,6 +76,20 @@ export function useWebSocket(config) {
     newSocket.on('connect', () => {
       setConnectionState('connected');
       addReceivedLog({ event: 'connect', userId });
+
+      try {
+        const cfg = configRef.current;
+        if (cfg) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            url: cfg.serverUrl,
+            api_key: cfg.apiKey,
+            path: cfg.path,
+            chatbot_id: cfg.chatbotId,
+            page_id: cfg.pageId,
+          }));
+        }
+      } catch {}
+
 
       const params = getParameters(channel || 'app', customParams);
       const messagePayload = {

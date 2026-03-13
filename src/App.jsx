@@ -1,19 +1,41 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useWebSocket } from './hooks/useWebSocket';
+import { STORAGE_KEY } from './constants';
 
 const DEFAULT_URL = 'https://dev.setsailapi.com';
-const DEFAULT_API_KEY = 'Ba6C7ouMwZ0HqH8VX7WL6cCba0KwrC0sfBt5p-Hwdr0';
 const DEFAULT_PATH = '/engine/ws/socket.io/';
-const DEFAULT_CHATBOT_ID = '20250221114007914GB1ALRNKNH';
-const DEFAULT_PAGE_ID = 'aahk-demo-kmzmz9d';
+
+function getInitialConfig() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return {
+        serverUrl: parsed.url ?? DEFAULT_URL,
+        apiKey: parsed.api_key ?? '',
+        path: parsed.path ?? DEFAULT_PATH,
+        chatbotId: parsed.chatbot_id ?? '',
+        pageId: parsed.page_id ?? '',
+      };
+    }
+  } catch {}
+  return {
+    serverUrl: DEFAULT_URL,
+    apiKey: '',
+    path: DEFAULT_PATH,
+    chatbotId: '',
+    pageId: '',
+  };
+}
 
 function App() {
   const logsContainerRef = useRef(null);
-  const [serverUrl, setServerUrl] = useState(DEFAULT_URL);
-  const [apiKey, setApiKey] = useState(DEFAULT_API_KEY);
-  const [path, setPath] = useState(DEFAULT_PATH);
-  const [chatbotId, setChatbotId] = useState(DEFAULT_CHATBOT_ID);
-  const [pageId, setPageId] = useState(DEFAULT_PAGE_ID);
+  const initialConfig = useMemo(() => getInitialConfig(), []);
+  const [serverUrl, setServerUrl] = useState(initialConfig.serverUrl);
+  const [apiKey, setApiKey] = useState(initialConfig.apiKey);
+  const [path, setPath] = useState(initialConfig.path);
+  const [chatbotId, setChatbotId] = useState(initialConfig.chatbotId);
+  const [pageId, setPageId] = useState(initialConfig.pageId);
   const [channel, setChannel] = useState('app');
   const [sessionPrefix, setSessionPrefix] = useState('');
   const [customParams, setCustomParams] = useState({});
