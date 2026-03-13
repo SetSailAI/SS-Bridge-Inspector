@@ -130,7 +130,6 @@ function App() {
                   type="text"
                   value={serverUrl}
                   onChange={(e) => setServerUrl(e.target.value)}
-                  placeholder="ws://localhost:3000"
                   disabled={configDisabled}
                 />
               </label>
@@ -142,7 +141,6 @@ function App() {
                   type="text"
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="test_api_key_123"
                   disabled={configDisabled}
                 />
               </label>
@@ -166,7 +164,6 @@ function App() {
                   type="text"
                   value={chatbotId}
                   onChange={(e) => setChatbotId(e.target.value)}
-                  placeholder="20250221114007914GB1ALRNKNH"
                   disabled={configDisabled}
                 />
               </label>
@@ -178,7 +175,6 @@ function App() {
                   type="text"
                   value={pageId}
                   onChange={(e) => setPageId(e.target.value)}
-                  placeholder="aahk-demo-kmzmz9d"
                   disabled={configDisabled}
                 />
               </label>
