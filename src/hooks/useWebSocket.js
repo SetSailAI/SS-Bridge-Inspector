@@ -36,6 +36,7 @@ export function useWebSocket(config) {
   const [logs, setLogs] = useState([]);
   const nextLogIdRef = useRef(0);
   const configRef = useRef(null);
+  const userIdRef = useRef(null);
 
   useEffect(() => {
     configRef.current = config;
@@ -59,6 +60,7 @@ export function useWebSocket(config) {
     const cleanUrl = serverUrl.replace(/^(ws|wss|http|https):\/\//, '');
     const socketUrl = `${protocol}${cleanUrl}`;
     const userId = generateUserId(channel || 'app', sessionPrefix || '');
+    userIdRef.current = userId;
 
     setConnectionState('connecting');
 
@@ -91,7 +93,6 @@ export function useWebSocket(config) {
       } catch {}
 
 
-      const params = getParameters(channel || 'app', customParams);
       const messagePayload = {
         sender: { id: userId },
         recipient: { id: 'BOT' },
@@ -99,9 +100,7 @@ export function useWebSocket(config) {
         chatbot_id: chatbotId,
         page_id: pageId,
         timestamp: Date.now(),
-        parameters: params,
       };
-      if (isEmptyObject(messagePayload.parameters)) delete messagePayload.parameters;
       const setLangPayload = { message: messagePayload };
       newSocket.emit('client-message', setLangPayload);
       addSentLog(setLangPayload);
@@ -142,12 +141,21 @@ export function useWebSocket(config) {
     if (!text || !socket) return;
 
     const config = configRef.current;
-    const params = config ? getParameters(config.channel || 'app', config.customParams) : {};
-    const payload = stripEmptyParameters({
-      message: text,
-      parameters: params,
-    });
-    socket.emit('user_message', payload);
+    const userId = userIdRef.current;
+    if (!config || !userId) return;
+
+    const payload = {
+      message: {
+        page_id: config.pageId,
+        chatbot_id: config.chatbotId,
+        sender: { id: userId },
+        recipient: { id: 'BOT' },
+        message: { text },
+        timestamp: Date.now(),
+      }
+    };
+
+    socket.emit('client-message', payload);
     addSentLog(payload);
     setMessageInput('');
   }, [messageInput, socket, addSentLog]);
