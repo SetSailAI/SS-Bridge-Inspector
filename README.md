@@ -5,6 +5,7 @@ A React app for testing WebSocket connections to chatbot APIs. Connect to a Sock
 ## Features
 
 - **Connection** – Configure server URL, API key, path, chatbot ID, and page ID. Connect or disconnect with one click.
+- **Inject param** – Configure `app_user_id`, `app_flight_ids`, and `app_has_mytag` and send them on every message.
 - **Send messages** – Type and send messages while connected. Supports Enter key to send.
 - **Raw data log** – View all sent and received payloads as formatted JSON with timestamps.
 - **Clear & reconnect** – Clear the log and reconnect with the same config in one action.
@@ -30,6 +31,9 @@ Open http://localhost:5173 in your browser.
 | **Chatbot ID** | Bot identifier used in `client-message` events. |
 | **Page ID** | Page identifier used in `client-message` events. |
 | **isKiosk** | When enabled, adds `platform: "kiosk"` to message parameters. |
+| **Inject param: app_user_id** | AAHK app user identifier. |
+| **Inject param: app_flight_ids** | JSON array of `{ id, timestamp }`; sent as JSON-stringified string in payload. |
+| **Inject param: app_has_mytag** | `"true"` or `"false"` string value. |
 
 Configuration fields are locked while connected. Disconnect to change them.
 
@@ -45,21 +49,38 @@ Configuration fields are locked while connected. Disconnect to change them.
     "message": { "text": "set_lang_english" },
     "chatbot_id": "<chatbot_id>",
     "page_id": "<page_id>",
+    "first_message": true,
+    "inject_param": [
+      { "key": "app_user_id", "value": "<app_user_id>" },
+      { "key": "app_flight_ids", "value": "[{\"id\":\"CX548\",\"timestamp\":1744732800000}]" },
+      { "key": "app_has_mytag", "value": "true" }
+    ],
     "timestamp": <ms>
   }
 }
 ```
 
-**To send a message**, the app emits `user_message`:
+**To send a message**, the app emits `client-message` and includes `inject_param` on every message:
 
 ```json
 {
-  "message": "<user text>",
-  "parameters": { "platform": "kiosk" }
+  "message": {
+    "sender": { "id": "<user_id>" },
+    "recipient": { "id": "BOT" },
+    "message": { "text": "<user text>" },
+    "chatbot_id": "<chatbot_id>",
+    "page_id": "<page_id>",
+    "inject_param": [
+      { "key": "app_user_id", "value": "<app_user_id>" },
+      { "key": "app_flight_ids", "value": "[{\"id\":\"CX548\",\"timestamp\":1744732800000}]" },
+      { "key": "app_has_mytag", "value": "true" }
+    ],
+    "timestamp": <ms>
+  }
 }
 ```
 
-`parameters` is omitted when empty.
+`inject_param` is omitted only if invalid JSON is entered for `app_flight_ids` (the UI blocks send/connect and shows an error).
 
 **Auth** is sent in the Socket.IO handshake as `auth: { api_key, token, user_id }`.
 
@@ -70,7 +91,6 @@ The server must:
 - Accept Socket.IO connections on the configured path
 - Authenticate via `auth: { api_key, token, user_id }`
 - Handle `client-message` events
-- Handle `user_message` events with `{ message: string, parameters?: object }`
 - Emit `message` and/or `bot_message` events for responses
 
 ## Tech Stack
