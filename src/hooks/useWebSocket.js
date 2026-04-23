@@ -37,6 +37,8 @@ export function useWebSocket(config) {
   const nextLogIdRef = useRef(0);
   const configRef = useRef(null);
   const userIdRef = useRef(null);
+  // Tracks the timestamp of the last received bot_message for history replay
+  const lastReceivedAtRef = useRef(null);
 
   useEffect(() => {
     configRef.current = config;
@@ -53,13 +55,16 @@ export function useWebSocket(config) {
   const addReceivedLog = useCallback((payload) => addLog('received', payload), [addLog]);
 
   const connect = useCallback((config) => {
-    const { serverUrl, apiKey, path, chatbotId, pageId, channel, sessionPrefix, customParams = {} } = config;
+    const { serverUrl, apiKey, path, chatbotId, pageId, channel, sessionPrefix, customParams = {}, injectParam = [], since } = config;
     configRef.current = config;
 
     const protocol = serverUrl.startsWith('wss://') || serverUrl.startsWith('https://') ? 'wss://' : 'ws://';
     const cleanUrl = serverUrl.replace(/^(ws|wss|http|https):\/\//, '');
     const socketUrl = `${protocol}${cleanUrl}`;
-    const userId = generateUserId(channel || 'app', sessionPrefix || '');
+    // Reuse existing userId if provided (history replay must use same userId to hit the right Redis key)
+    const userId = config.reuseUserId && userIdRef.current
+      ? userIdRef.current
+      : generateUserId(channel || 'app', sessionPrefix || '');
     userIdRef.current = userId;
 
     setConnectionState('connecting');
@@ -70,6 +75,7 @@ export function useWebSocket(config) {
         api_key: apiKey,
         token: apiKey,
         user_id: userId,
+        ...(since != null && { since }),
       },
       transports: ['websocket', 'polling'],
       reconnection: false,
@@ -88,22 +94,29 @@ export function useWebSocket(config) {
             path: cfg.path,
             chatbot_id: cfg.chatbotId,
             page_id: cfg.pageId,
+            inject_param_input: cfg.injectParamInput || '[]',
           }));
         }
       } catch {}
 
 
-      const messagePayload = {
-        sender: { id: userId },
-        recipient: { id: 'BOT' },
-        message: { text: 'set_lang_english' },
-        chatbot_id: chatbotId,
-        page_id: pageId,
-        timestamp: Date.now(),
-      };
-      const setLangPayload = { message: messagePayload };
-      newSocket.emit('client-message', setLangPayload);
-      addSentLog(setLangPayload);
+      // Skip set_lang_english when reconnecting mid-conversation (since= set)
+      // — sending it would reset bot state and generate a spurious welcome message
+      if (!since) {
+        const messagePayload = {
+          sender: { id: userId },
+          recipient: { id: 'BOT' },
+          message: { text: 'set_lang_english' },
+          chatbot_id: chatbotId,
+          page_id: pageId,
+          first_message: true,
+          inject_param: injectParam,
+          timestamp: Date.now(),
+        };
+        const setLangPayload = { message: messagePayload };
+        newSocket.emit('client-message', setLangPayload);
+        addSentLog(setLangPayload);
+      }
     });
 
     newSocket.on('disconnect', (reason) => {
@@ -122,6 +135,10 @@ export function useWebSocket(config) {
 
     newSocket.on('bot_message', (data) => {
       addReceivedLog({ event: 'bot_message', data });
+      // Track the latest message timestamp for history replay
+      if (data?.timestamp) {
+        lastReceivedAtRef.current = data.timestamp;
+      }
     });
 
     setSocket(newSocket);
@@ -136,13 +153,14 @@ export function useWebSocket(config) {
     }
   }, [socket]);
 
-  const send = useCallback(() => {
+  const send = useCallback((overrides = {}) => {
     const text = messageInput.trim();
     if (!text || !socket) return;
 
     const config = configRef.current;
     const userId = userIdRef.current;
     if (!config || !userId) return;
+    const injectParam = Array.isArray(overrides.injectParam) ? overrides.injectParam : (config.injectParam || []);
 
     const payload = {
       message: {
@@ -151,6 +169,7 @@ export function useWebSocket(config) {
         sender: { id: userId },
         recipient: { id: 'BOT' },
         message: { text },
+        inject_param: injectParam,
         timestamp: Date.now(),
       }
     };
@@ -165,6 +184,8 @@ export function useWebSocket(config) {
   }, []);
 
   const clearAndReconnect = useCallback(() => {
+    const config = configRef.current;
+    if (!config?.sessionPrefix?.trim()) return;
     setLogs([]);
     if (socket) {
       socket.disconnect();
@@ -172,11 +193,40 @@ export function useWebSocket(config) {
       setSocket(null);
     }
     setConnectionState('disconnected');
-    const config = configRef.current;
     if (config) {
       setTimeout(() => connect(config), 100);
     }
   }, [socket, connect]);
+
+  // Simulate a transport-level drop (bridge sees "transport close" → grace period starts)
+  // without sending an explicit disconnect packet
+  const simulateDrop = useCallback(() => {
+    if (!socket) return;
+    addLog('system', { event: 'simulate_drop', userId: userIdRef.current, note: 'Closing transport directly — bridge will see transport close and start grace period' });
+    // Close the underlying transport without sending a disconnect packet
+    // This makes the bridge treat it as an unexpected drop, not an explicit disconnect
+    socket.io.engine.close();
+    socket.removeAllListeners();
+    setSocket(null);
+    setConnectionState('disconnected');
+  }, [socket, addLog]);
+
+  // Reconnect with `since` set to lastReceivedAt to test history replay
+  const testHistoryReplay = useCallback(() => {
+    const since = lastReceivedAtRef.current;
+    if (socket) {
+      // Also use transport close here so bridge starts grace period if not already in one
+      socket.io.engine.close();
+      socket.removeAllListeners();
+      setSocket(null);
+    }
+    setConnectionState('disconnected');
+    const config = configRef.current;
+    if (config) {
+      addLog('system', { event: 'history_replay_test', since, userId: userIdRef.current, note: `Reconnecting with same userId and since=${since}` });
+      setTimeout(() => connect({ ...config, since, reuseUserId: true }), 100);
+    }
+  }, [socket, connect, addLog]);
 
   const isConnected = connectionState === 'connected';
   const configDisabled = isConnected || connectionState === 'connecting';
@@ -193,5 +243,8 @@ export function useWebSocket(config) {
     disconnect,
     send,
     clearAndReconnect,
+    simulateDrop,
+    testHistoryReplay,
+    lastReceivedAt: lastReceivedAtRef.current,
   };
 }

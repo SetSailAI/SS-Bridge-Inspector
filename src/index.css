@@ -2,8 +2,12 @@
   box-sizing: border-box;
 }
 
-body {
+html, body, #root {
+  height: 100%;
   margin: 0;
+}
+
+body {
   font-family: system-ui, -apple-system, sans-serif;
   font-size: 14px;
   line-height: 1.5;
@@ -11,52 +15,92 @@ body {
   color: #e0e0e0;
 }
 
+/* ── Root app: fills full viewport, no page scroll ── */
 .app {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 24px;
-}
-
-header h1 {
-  margin: 0 0 24px;
-  font-size: 1.5rem;
-}
-
-.app-layout {
-  display: grid;
-  grid-template-columns: 360px 1fr;
-  gap: 24px;
-  align-items: start;
-}
-
-.config-column {
+  height: 100vh;
   display: flex;
   flex-direction: column;
+  padding: 16px;
+  overflow: hidden;
+}
+
+/* ── Two-column layout ── */
+.app-layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 16px;
+  flex: 1;
+  min-height: 0; /* allow children to shrink */
+}
+
+/* ── LEFT COLUMN ── */
+.left-column {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   gap: 0;
 }
 
-section {
-  margin-bottom: 24px;
+/* Config panel scrolls, send panel stays pinned */
+.config-panel {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px;
+  padding-bottom: 8px;
 }
 
-section h2 {
-  margin: 0 0 12px;
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 8px;
+}
+
+.panel-header h2 {
+  margin: 0;
   font-size: 1rem;
   font-weight: 600;
   color: #aaa;
 }
 
-.connection-row,
-.send-row {
+.connection-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Send panel — pinned to bottom of left column */
+.send-panel {
+  flex-shrink: 0;
+  border-top: 1px solid #333;
+  padding-top: 12px;
+  margin-top: 8px;
+}
+
+.send-panel h2 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #aaa;
+}
+
+.send-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.send-meta {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .send-params {
-  margin-top: 8px;
-  padding: 8px 12px;
+  padding: 6px 10px;
   background: #252525;
   border: 1px solid #333;
   border-radius: 4px;
@@ -66,45 +110,90 @@ section h2 {
   display: block;
   font-size: 11px;
   color: #888;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .send-params-value {
   margin: 0;
   font-family: "SF Mono", "Consolas", monospace;
-  font-size: 12px;
+  font-size: 11px;
+  color: #aaa;
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-wrap: break-word;
+}
+
+/* ── RIGHT COLUMN ── */
+.logs-column {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.logs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.logs-header h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
   color: #aaa;
 }
 
-.connection-row label,
-.send-row {
-  flex: 1;
+.logs-header-buttons {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+}
+
+.btn-divider {
+  width: 1px;
+  height: 20px;
+  background: #444;
+  margin: 0 2px;
+}
+
+.logs-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  background: #1e1e1e;
+  min-height: 0;
+}
+
+/* ── Form elements ── */
+.connection-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
 }
 
 .connection-row label {
+  flex: 1;
+  display: flex;
   flex-direction: column;
   align-items: flex-start;
+  gap: 4px;
+  font-size: 12px;
+  color: #999;
 }
 
-.connection-row-checkbox .checkbox-label {
-  flex-direction: row;
-  align-items: center;
-  cursor: pointer;
-}
-
-.connection-row-checkbox input[type="checkbox"] {
-  width: auto;
-  margin-right: 8px;
-  cursor: pointer;
+.button-row {
+  align-items: flex-start;
 }
 
 .connection-row-param .param-row {
   display: flex;
   gap: 8px;
-  margin-top: 4px;
+  width: 100%;
 }
 
 .connection-row-param .param-row input {
@@ -112,9 +201,16 @@ section h2 {
 }
 
 .required {
-  font-size: 12px;
-  color: #888;
+  font-size: 11px;
+  color: #666;
   font-weight: normal;
+}
+
+.label-inline {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  white-space: nowrap;
 }
 
 .param-error {
@@ -125,10 +221,11 @@ section h2 {
 }
 
 .param-list {
-  margin-top: 8px;
+  margin-top: 6px;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  width: 100%;
 }
 
 .param-item {
@@ -147,7 +244,7 @@ section h2 {
 }
 
 .param-remove {
-  padding: 2px 8px;
+  padding: 2px 6px;
   font-size: 14px;
   line-height: 1;
   min-width: auto;
@@ -155,7 +252,7 @@ section h2 {
 
 input[type="text"] {
   width: 100%;
-  padding: 8px 12px;
+  padding: 6px 10px;
   font-family: monospace;
   font-size: 13px;
   background: #2a2a2a;
@@ -164,19 +261,46 @@ input[type="text"] {
   color: #e0e0e0;
 }
 
-input:disabled {
+textarea {
+  width: 100%;
+  padding: 6px 10px;
+  font-family: monospace;
+  font-size: 13px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #e0e0e0;
+  resize: vertical;
+}
+
+select {
+  width: 100%;
+  padding: 6px 10px;
+  font-family: monospace;
+  font-size: 13px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #e0e0e0;
+}
+
+input:disabled,
+textarea:disabled,
+select:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
+/* ── Buttons ── */
 button {
-  padding: 8px 16px;
+  padding: 6px 14px;
   font-size: 13px;
   background: #333;
   border: 1px solid #555;
   border-radius: 4px;
   color: #e0e0e0;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 button:hover:not(:disabled) {
@@ -188,71 +312,80 @@ button:disabled {
   cursor: not-allowed;
 }
 
-.status {
-  padding: 4px 8px;
-  font-size: 12px;
-  border-radius: 4px;
+.btn-send {
+  background: #1e3a2f;
+  border-color: #4a8a6a;
+  font-weight: 600;
 }
 
-.status-disconnected {
-  background: #4a2a2a;
-  color: #e88;
+.btn-send:hover:not(:disabled) {
+  background: #254f3e;
 }
 
-.status-connecting {
-  background: #4a4a2a;
-  color: #ee8;
+.btn-danger {
+  background: #3a1e1e;
+  border-color: #8a4a4a;
 }
 
-.status-connected {
-  background: #2a4a2a;
-  color: #8e8;
-}
-
-.status-error {
-  background: #4a2a2a;
-  color: #e88;
-}
-
-.logs-column {
-  min-width: 0;
-}
-
-.logs-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.logs-header h2 {
-  margin: 0;
-}
-
-.logs-header-buttons {
-  display: flex;
-  gap: 8px;
+.btn-danger:hover:not(:disabled) {
+  background: #4f2525;
 }
 
 .clear-btn,
-.clear-reconnect-btn {
-  padding: 6px 12px;
+.clear-reconnect-btn,
+.simulate-drop-btn,
+.history-replay-btn {
+  padding: 5px 10px;
   font-size: 12px;
 }
 
 .clear-reconnect-btn {
   background: #2a3a4a;
+  border-color: #4a6a8a;
 }
 
-.logs-container {
-  height: 80vh;
-  overflow-y: auto;
-  padding: 12px;
-  border: 1px solid #444;
+.clear-reconnect-btn:hover:not(:disabled) {
+  background: #354a5a;
+}
+
+.simulate-drop-btn {
+  background: #3a2a1e;
+  border-color: #9a6a3a;
+}
+
+.simulate-drop-btn:hover:not(:disabled) {
+  background: #4a3a2e;
+}
+
+.history-replay-btn {
+  background: #3a2a4a;
+  border-color: #7a5a9a;
+}
+
+.history-replay-btn:hover:not(:disabled) {
+  background: #4a3a5a;
+}
+
+.history-replay-since {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+/* ── Status badge ── */
+.status {
+  padding: 3px 8px;
+  font-size: 11px;
   border-radius: 4px;
-  background: #1e1e1e;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
+.status-disconnected { background: #4a2a2a; color: #e88; }
+.status-connecting   { background: #4a4a2a; color: #ee8; }
+.status-connected    { background: #2a4a2a; color: #8e8; }
+.status-error        { background: #4a2a2a; color: #e88; }
+
+/* ── Log entries ── */
 .log-empty {
   margin: 0;
   color: #666;
@@ -260,8 +393,8 @@ button:disabled {
 }
 
 .log-entry {
-  margin-bottom: 12px;
-  padding: 12px;
+  margin-bottom: 10px;
+  padding: 10px;
   border-radius: 4px;
   border-left: 4px solid transparent;
 }
@@ -270,15 +403,9 @@ button:disabled {
   margin-bottom: 0;
 }
 
-.log-entry-sent {
-  background: #1e3a2f;
-  border-left-color: #6dd4a8;
-}
-
-.log-entry-received {
-  background: #3a301e;
-  border-left-color: #d4b06d;
-}
+.log-entry-sent     { background: #1e3a2f; border-left-color: #6dd4a8; }
+.log-entry-received { background: #3a301e; border-left-color: #d4b06d; }
+.log-entry-system   { background: #2a2a3a; border-left-color: #7a7ad4; }
 
 .log-label {
   display: inline-block;
@@ -288,19 +415,15 @@ button:disabled {
   margin-bottom: 4px;
 }
 
-.log-entry-sent .log-label {
-  color: #6dd4a8;
-}
-
-.log-entry-received .log-label {
-  color: #d4b06d;
-}
+.log-entry-sent .log-label     { color: #6dd4a8; }
+.log-entry-received .log-label { color: #d4b06d; }
+.log-entry-system .log-label   { color: #7a7ad4; }
 
 .log-time {
   display: block;
   font-size: 11px;
   color: #888;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .log-entry pre {
@@ -315,9 +438,16 @@ button:disabled {
   word-break: break-all;
 }
 
+/* ── Responsive ── */
 @media (max-width: 800px) {
   .app-layout {
     grid-template-columns: 1fr;
   }
+  .app {
+    height: auto;
+    overflow: auto;
+  }
+  .logs-container {
+    height: 60vh;
+  }
 }
-
